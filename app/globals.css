@@ -1,19 +1,19 @@
 @import "tailwindcss";
 
 @theme inline {
-  --color-background: #0b0f19;
-  --color-foreground: #e2e8f0;
-  --color-surface: #111827;
-  --color-surface-elevated: #1e293b;
-  --color-border: #1e293b;
-  --color-border-subtle: #334155;
-  --color-accent: #f59e0b;
-  --color-accent-dim: #78350f;
-  --color-muted: #94a3b8;
-  --color-muted-fg: #64748b;
-  --color-danger: #ef4444;
-  --color-success: #22c55e;
-  --color-info: #3b82f6;
+  --color-background: #fafafa;
+  --color-foreground: #171717;
+  --color-surface: #ffffff;
+  --color-surface-elevated: #f8fafc;
+  --color-border: #e5e7eb;
+  --color-border-subtle: #f3f4f6;
+  --color-accent: #d97706;
+  --color-accent-dim: #fef3c7;
+  --color-muted: #525252;
+  --color-muted-fg: #737373;
+  --color-danger: #dc2626;
+  --color-success: #16a34a;
+  --color-info: #2563eb;
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
@@ -39,15 +39,15 @@ body {
   background: var(--color-background);
 }
 ::-webkit-scrollbar-thumb {
-  background: var(--color-border-subtle);
+  background: #d4d4d8;
   border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--color-muted);
+  background: #a1a1aa;
 }
 
 /* Selection */
 ::selection {
-  background: rgba(245, 158, 11, 0.3);
-  color: #fff;
+  background: rgba(217, 119, 6, 0.2);
+  color: #171717;
 }

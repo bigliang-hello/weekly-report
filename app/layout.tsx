@@ -4,8 +4,8 @@ import { GeistMono } from "geist/font/mono";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Weekly Report",
-  description: "OpenClaw Weekly Report Viewer",
+  title: "具身智能行业周报",
+  description: "具身智能行业周报数据汇总与洞察分析",
 };
 
 export default function RootLayout({

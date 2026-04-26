@@ -15,20 +15,22 @@ function ReportCard({
     minute: "2-digit",
   });
 
+  const title = `${report.time_range.start} ~ ${report.time_range.end} 周报`;
+
   return (
     <Link
       key={report.id}
       href={`/reports/${report.id}`}
-      className="group block relative rounded-xl border border-border bg-surface p-5 transition-all duration-300 hover:border-border-subtle hover:bg-surface-elevated hover:shadow-lg hover:shadow-accent/5"
+      className="group block relative rounded-xl border border-border bg-surface p-5 transition-all duration-300 hover:border-neutral-300 hover:shadow-md hover:shadow-accent/5"
     >
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-3 mb-2">
             <h2 className="text-base font-semibold text-foreground truncate">
-              {report.report_type}
+              {title}
             </h2>
-            <span className="shrink-0 inline-flex items-center rounded-full bg-accent/10 px-2.5 py-0.5 text-xs font-medium text-accent">
-              {report.time_range.start} — {report.time_range.end}
+            <span className="shrink-0 inline-flex items-center rounded-full bg-accent-dim px-2.5 py-0.5 text-xs font-medium text-accent">
+              {report.report_type}
             </span>
           </div>
           {report.executive_trend_judgement && (
@@ -40,7 +42,7 @@ function ReportCard({
         <div className="shrink-0 text-right">
           <time className="text-xs font-mono text-muted-fg">{dateLabel}</time>
           <div className="mt-3 flex justify-end">
-            <span className="inline-flex items-center justify-center rounded-full bg-border w-8 h-8 text-muted-fg transition-all duration-300 group-hover:bg-accent group-hover:text-background">
+            <span className="inline-flex items-center justify-center rounded-full bg-neutral-100 w-8 h-8 text-muted-fg transition-all duration-300 group-hover:bg-accent group-hover:text-white">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 width="16"
@@ -69,12 +71,12 @@ export default async function HomePage() {
   return (
     <main className="min-h-screen bg-background">
       {/* Header */}
-      <header className="border-b border-border">
+      <header className="border-b border-border bg-surface">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
           <div className="flex items-center gap-3 mb-2">
             <div className="w-2 h-8 rounded-full bg-accent" />
             <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
-              Weekly Report
+              具身智能行业周报
             </h1>
           </div>
           <p className="text-sm text-muted ml-5">
@@ -131,7 +133,7 @@ export default async function HomePage() {
       <footer className="border-t border-border mt-auto">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6">
           <p className="text-xs text-muted-fg text-center">
-            OpenClaw Weekly Report Viewer
+            具身智能行业周报 Viewer
           </p>
         </div>
       </footer>

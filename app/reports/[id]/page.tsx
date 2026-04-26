@@ -16,7 +16,7 @@ function SectionHeader({ title, count }: { title: string; count?: number }) {
         {title}
       </h2>
       {count !== undefined && (
-        <span className="inline-flex items-center justify-center rounded-full bg-surface-elevated border border-border px-2 py-0.5 text-xs font-mono text-muted">
+        <span className="inline-flex items-center justify-center rounded-full bg-neutral-100 border border-border px-2 py-0.5 text-xs font-mono text-muted">
           {count}
         </span>
       )}
@@ -32,10 +32,10 @@ function Badge({
   variant?: "default" | "accent" | "success" | "muted";
 }) {
   const variants = {
-    default: "bg-surface-elevated text-muted border-border",
-    accent: "bg-accent/10 text-accent border-accent/20",
-    success: "bg-success/10 text-success border-success/20",
-    muted: "bg-background text-muted-fg border-border-subtle",
+    default: "bg-neutral-100 text-muted border-neutral-200",
+    accent: "bg-accent-dim text-accent border-amber-200",
+    success: "bg-green-50 text-green-700 border-green-200",
+    muted: "bg-background text-muted-fg border-border",
   };
   return (
     <span
@@ -55,10 +55,46 @@ function Card({
 }) {
   return (
     <div
-      className={`rounded-xl border border-border bg-surface p-5 transition-colors hover:border-border-subtle ${className}`}
+      className={`rounded-xl border border-border bg-surface p-5 transition-colors hover:border-neutral-300 ${className}`}
     >
       {children}
     </div>
+  );
+}
+
+function SourceLink({
+  url,
+  title,
+  publisher,
+}: {
+  url: string;
+  title: string;
+  publisher: string;
+}) {
+  return (
+    <a
+      href={url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="group/link inline-flex items-center gap-1.5 text-xs text-muted-fg hover:text-accent transition-colors"
+    >
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        width="12"
+        height="12"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        <path d="M15 3h6v6" />
+        <path d="M10 14 21 3" />
+        <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+      </svg>
+      {title} — {publisher}
+    </a>
   );
 }
 
@@ -70,6 +106,8 @@ export default async function ReportDetailPage({ params }: Props) {
   const report = await getReportById(reportId);
   if (!report) notFound();
 
+  const reportTitle = `${report.time_range.start} ~ ${report.time_range.end} 周报`;
+
   return (
     <main className="min-h-screen bg-background">
       {/* Sticky nav */}
@@ -79,7 +117,7 @@ export default async function ReportDetailPage({ params }: Props) {
             href="/"
             className="group inline-flex items-center gap-2 text-sm text-muted hover:text-foreground transition-colors"
           >
-            <span className="inline-flex items-center justify-center rounded-lg bg-surface border border-border w-8 h-8 transition-colors group-hover:border-border-subtle group-hover:bg-surface-elevated">
+            <span className="inline-flex items-center justify-center rounded-lg bg-surface border border-border w-8 h-8 transition-colors group-hover:border-neutral-300 group-hover:bg-neutral-50">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 width="16"
@@ -107,13 +145,11 @@ export default async function ReportDetailPage({ params }: Props) {
         <header className="mb-12 pb-8 border-b border-border">
           <div className="flex flex-wrap items-center gap-3 mb-4">
             <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-foreground">
-              {report.report_type}
+              {reportTitle}
             </h1>
           </div>
           <div className="flex flex-wrap items-center gap-3 text-sm">
-            <Badge variant="accent">
-              {report.time_range.start} — {report.time_range.end}
-            </Badge>
+            <Badge variant="accent">{report.report_type}</Badge>
             <span className="text-muted-fg">
               创建于{" "}
               {new Date(report.created_at).toLocaleString("zh-CN")}
@@ -121,7 +157,7 @@ export default async function ReportDetailPage({ params }: Props) {
           </div>
 
           {report.executive_trend_judgement && (
-            <div className="mt-6 rounded-xl border border-accent/20 bg-accent/5 p-5">
+            <div className="mt-6 rounded-xl border border-amber-200 bg-amber-50/50 p-5">
               <div className="flex items-center gap-2 mb-2">
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -215,7 +251,7 @@ export default async function ReportDetailPage({ params }: Props) {
                     {item.summary}
                   </p>
 
-                  <div className="rounded-lg bg-background border border-border p-3 mb-3">
+                  <div className="rounded-lg bg-neutral-50 border border-border p-3 mb-3">
                     <span className="text-xs font-semibold text-foreground/80">
                       影响评估
                     </span>
@@ -224,29 +260,11 @@ export default async function ReportDetailPage({ params }: Props) {
                     </p>
                   </div>
 
-                  <a
-                    href={item.source.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="group/link inline-flex items-center gap-1.5 text-xs text-muted-fg hover:text-accent transition-colors"
-                  >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      width="12"
-                      height="12"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    >
-                      <path d="M15 3h6v6" />
-                      <path d="M10 14 21 3" />
-                      <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
-                    </svg>
-                    {item.source.title} — {item.source.publisher}
-                  </a>
+                  <SourceLink
+                    url={item.source.url}
+                    title={item.source.title}
+                    publisher={item.source.publisher}
+                  />
                 </Card>
               ))}
             </div>
@@ -264,7 +282,7 @@ export default async function ReportDetailPage({ params }: Props) {
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="border-b border-border bg-background">
+                    <tr className="border-b border-border bg-neutral-50">
                       <th className="text-left px-5 py-3 text-xs font-semibold uppercase tracking-wider text-muted-fg">
                         时间
                       </th>
@@ -286,7 +304,7 @@ export default async function ReportDetailPage({ params }: Props) {
                     {report.large_deals.map((deal, idx) => (
                       <tr
                         key={idx}
-                        className="transition-colors hover:bg-surface-elevated"
+                        className="transition-colors hover:bg-neutral-50"
                       >
                         <td className="px-5 py-3.5 font-mono text-xs text-muted-fg whitespace-nowrap">
                           {deal.time}
@@ -301,7 +319,7 @@ export default async function ReportDetailPage({ params }: Props) {
                           {deal.product_or_service}
                         </td>
                         <td className="px-5 py-3.5">
-                          <span className="inline-flex items-center rounded-md bg-accent/10 px-2 py-0.5 text-xs font-medium text-accent">
+                          <span className="inline-flex items-center rounded-md bg-accent-dim px-2 py-0.5 text-xs font-medium text-accent">
                             {deal.amount_range}
                           </span>
                         </td>
@@ -310,6 +328,16 @@ export default async function ReportDetailPage({ params }: Props) {
                   </tbody>
                 </table>
               </div>
+            </div>
+            <div className="mt-3 space-y-2">
+              {report.large_deals.map((deal, idx) => (
+                <SourceLink
+                  key={idx}
+                  url={deal.source.url}
+                  title={deal.source.title}
+                  publisher={deal.source.publisher}
+                />
+              ))}
             </div>
           </section>
         )}
@@ -348,30 +376,11 @@ export default async function ReportDetailPage({ params }: Props) {
                     {report.research_views.industry_judgement}
                   </p>
                 </div>
-                <a
-                  href={report.research_views.source.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="group/link inline-flex items-center gap-1.5 text-xs text-muted-fg hover:text-accent transition-colors pt-2"
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="12"
-                    height="12"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <path d="M15 3h6v6" />
-                    <path d="M10 14 21 3" />
-                    <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
-                  </svg>
-                  {report.research_views.source.title} —{" "}
-                  {report.research_views.source.publisher}
-                </a>
+                <SourceLink
+                  url={report.research_views.source.url}
+                  title={report.research_views.source.title}
+                  publisher={report.research_views.source.publisher}
+                />
               </div>
             </Card>
           </section>
@@ -534,7 +543,7 @@ export default async function ReportDetailPage({ params }: Props) {
                             key={idx}
                             className="flex gap-2.5 text-sm text-muted"
                           >
-                            <span className="mt-1.5 w-1 h-1 rounded-full bg-border-subtle shrink-0" />
+                            <span className="mt-1.5 w-1 h-1 rounded-full bg-neutral-300 shrink-0" />
                             <span className="leading-relaxed">{item}</span>
                           </li>
                         ))}
