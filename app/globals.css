@@ -18,6 +18,28 @@
   --font-mono: var(--font-geist-mono);
 }
 
+:root {
+  color-scheme: light;
+}
+
+/* Dark mode overrides */
+.dark {
+  color-scheme: dark;
+  --color-background: #0b0f19;
+  --color-foreground: #e2e8f0;
+  --color-surface: #111827;
+  --color-surface-elevated: #1e293b;
+  --color-border: #1e293b;
+  --color-border-subtle: #334155;
+  --color-accent: #f59e0b;
+  --color-accent-dim: #78350f;
+  --color-muted: #94a3b8;
+  --color-muted-fg: #64748b;
+  --color-danger: #ef4444;
+  --color-success: #22c55e;
+  --color-info: #3b82f6;
+}
+
 /* Scrollbar hide utility (for tab row) */
 .scrollbar-none {
   -ms-overflow-style: none;
@@ -33,6 +55,7 @@ body {
   font-family: var(--font-geist-sans), system-ui, -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  transition: background-color 0.2s ease, color 0.2s ease;
 }
 
 /* Custom scrollbar */
@@ -51,8 +74,32 @@ body {
   background: #a1a1aa;
 }
 
+.dark ::-webkit-scrollbar-thumb {
+  background: #334155;
+}
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
+}
+
 /* Selection */
 ::selection {
   background: rgba(217, 119, 6, 0.2);
   color: #171717;
+}
+.dark ::selection {
+  background: rgba(245, 158, 11, 0.3);
+  color: #fff;
+}
+
+/* Smooth transitions for theme switch */
+*, *::before, *::after {
+  transition-property: background-color, border-color, color;
+  transition-duration: 0.15s;
+  transition-timing-function: ease-out;
+}
+
+/* Exclude animation and transform transitions */
+svg, path, circle, rect, line, polyline, polygon, g,
+a, button, input, select, textarea {
+  transition: none;
 }
