@@ -8,6 +8,60 @@ interface Props {
   params: Promise<{ id: string }>;
 }
 
+function SectionHeader({ title, count }: { title: string; count?: number }) {
+  return (
+    <div className="flex items-center gap-3 mb-5">
+      <div className="w-1 h-6 rounded-full bg-accent" />
+      <h2 className="text-lg font-bold tracking-tight text-foreground">
+        {title}
+      </h2>
+      {count !== undefined && (
+        <span className="inline-flex items-center justify-center rounded-full bg-surface-elevated border border-border px-2 py-0.5 text-xs font-mono text-muted">
+          {count}
+        </span>
+      )}
+    </div>
+  );
+}
+
+function Badge({
+  children,
+  variant = "default",
+}: {
+  children: React.ReactNode;
+  variant?: "default" | "accent" | "success" | "muted";
+}) {
+  const variants = {
+    default: "bg-surface-elevated text-muted border-border",
+    accent: "bg-accent/10 text-accent border-accent/20",
+    success: "bg-success/10 text-success border-success/20",
+    muted: "bg-background text-muted-fg border-border-subtle",
+  };
+  return (
+    <span
+      className={`inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium ${variants[variant]}`}
+    >
+      {children}
+    </span>
+  );
+}
+
+function Card({
+  children,
+  className = "",
+}: {
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <div
+      className={`rounded-xl border border-border bg-surface p-5 transition-colors hover:border-border-subtle ${className}`}
+    >
+      {children}
+    </div>
+  );
+}
+
 export default async function ReportDetailPage({ params }: Props) {
   const { id } = await params;
   const reportId = Number(id);
@@ -17,192 +71,481 @@ export default async function ReportDetailPage({ params }: Props) {
   if (!report) notFound();
 
   return (
-    <main className="max-w-5xl mx-auto px-4 py-8">
-      <div className="mb-6">
-        <Link href="/" className="text-sm text-gray-500 hover:text-gray-900">
-          ← 返回列表
-        </Link>
-      </div>
+    <main className="min-h-screen bg-background">
+      {/* Sticky nav */}
+      <nav className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-md">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
+          <Link
+            href="/"
+            className="group inline-flex items-center gap-2 text-sm text-muted hover:text-foreground transition-colors"
+          >
+            <span className="inline-flex items-center justify-center rounded-lg bg-surface border border-border w-8 h-8 transition-colors group-hover:border-border-subtle group-hover:bg-surface-elevated">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="m15 18-6-6 6-6" />
+              </svg>
+            </span>
+            <span className="hidden sm:inline">返回列表</span>
+          </Link>
+          <span className="text-xs font-mono text-muted-fg">
+            #{report.id}
+          </span>
+        </div>
+      </nav>
 
-      <h1 className="text-2xl font-bold mb-2">{report.report_type}</h1>
-      <p className="text-gray-500 mb-8">
-        {report.time_range.start} ~ {report.time_range.end}
-      </p>
-
-      {/* 高管摘要 */}
-      {report.executive_summary?.length > 0 && (
-        <section className="mb-10">
-          <h2 className="text-lg font-semibold mb-4 border-b pb-2">高管摘要</h2>
-          <div className="space-y-3">
-            {report.executive_summary.map((item, idx) => (
-              <div key={idx} className="bg-gray-50 rounded-lg p-4">
-                <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
-                  <span>{item.time}</span>
-                  <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded text-xs">
-                    {item.event_type}
-                  </span>
-                </div>
-                <div className="font-medium">{item.company_or_institution}</div>
-                <div className="text-gray-700 mt-1">{item.core_info}</div>
-              </div>
-            ))}
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 py-10">
+        {/* Hero */}
+        <header className="mb-12 pb-8 border-b border-border">
+          <div className="flex flex-wrap items-center gap-3 mb-4">
+            <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-foreground">
+              {report.report_type}
+            </h1>
           </div>
+          <div className="flex flex-wrap items-center gap-3 text-sm">
+            <Badge variant="accent">
+              {report.time_range.start} — {report.time_range.end}
+            </Badge>
+            <span className="text-muted-fg">
+              创建于{" "}
+              {new Date(report.created_at).toLocaleString("zh-CN")}
+            </span>
+          </div>
+
           {report.executive_trend_judgement && (
-            <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-lg text-amber-800">
-              <span className="font-medium">趋势判断：</span>
-              {report.executive_trend_judgement}
+            <div className="mt-6 rounded-xl border border-accent/20 bg-accent/5 p-5">
+              <div className="flex items-center gap-2 mb-2">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="text-accent"
+                >
+                  <polyline points="22 7 13.5 15.5 8.5 10.5 2 17" />
+                  <polyline points="16 7 22 7 22 13" />
+                </svg>
+                <span className="text-xs font-semibold uppercase tracking-wider text-accent">
+                  趋势判断
+                </span>
+              </div>
+              <p className="text-sm leading-relaxed text-foreground/90">
+                {report.executive_trend_judgement}
+              </p>
             </div>
           )}
-        </section>
-      )}
+        </header>
 
-      {/* 事件列表 */}
-      {report.event_list?.length > 0 && (
-        <section className="mb-10">
-          <h2 className="text-lg font-semibold mb-4 border-b pb-2">事件列表</h2>
-          <div className="space-y-4">
-            {report.event_list.map((item, idx) => (
-              <div key={idx} className="border rounded-lg p-4">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm text-gray-500">{item.time}</span>
-                    <span className="px-2 py-0.5 bg-green-100 text-green-700 rounded text-xs">
-                      {item.event_type}
+        {/* 高管摘要 */}
+        {report.executive_summary?.length > 0 && (
+          <section className="mb-14">
+            <SectionHeader
+              title="高管摘要"
+              count={report.executive_summary.length}
+            />
+            <div className="space-y-3">
+              {report.executive_summary.map((item, idx) => (
+                <Card key={idx}>
+                  <div className="flex flex-wrap items-center gap-2 mb-2">
+                    <Badge variant="accent">{item.event_type}</Badge>
+                    <span className="text-xs font-mono text-muted-fg">
+                      {item.time}
                     </span>
                   </div>
-                  <span className="px-2 py-0.5 bg-gray-100 text-gray-600 rounded text-xs">
-                    可信度：{item.credibility}
-                  </span>
+                  <h3 className="text-base font-semibold text-foreground mb-1">
+                    {item.company_or_institution}
+                  </h3>
+                  <p className="text-sm leading-relaxed text-muted">
+                    {item.core_info}
+                  </p>
+                </Card>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* 事件列表 */}
+        {report.event_list?.length > 0 && (
+          <section className="mb-14">
+            <SectionHeader
+              title="事件列表"
+              count={report.event_list.length}
+            />
+            <div className="space-y-4">
+              {report.event_list.map((item, idx) => (
+                <Card key={idx} className="relative overflow-hidden">
+                  <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-accent/40 via-accent/10 to-transparent" />
+                  <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+                    <div className="flex items-center gap-2">
+                      <Badge
+                        variant={
+                          item.event_type === "发布"
+                            ? "success"
+                            : item.event_type === "政策"
+                            ? "accent"
+                            : "default"
+                        }
+                      >
+                        {item.event_type}
+                      </Badge>
+                      <span className="text-xs font-mono text-muted-fg">
+                        {item.time}
+                      </span>
+                    </div>
+                    <Badge variant="muted">可信度：{item.credibility}</Badge>
+                  </div>
+
+                  <h3 className="text-base font-semibold text-foreground mb-1">
+                    {item.company_or_institution}
+                  </h3>
+                  <p className="text-sm leading-relaxed text-muted mb-3">
+                    {item.summary}
+                  </p>
+
+                  <div className="rounded-lg bg-background border border-border p-3 mb-3">
+                    <span className="text-xs font-semibold text-foreground/80">
+                      影响评估
+                    </span>
+                    <p className="text-sm text-muted mt-1">
+                      {item.impact_assessment}
+                    </p>
+                  </div>
+
+                  <a
+                    href={item.source.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="group/link inline-flex items-center gap-1.5 text-xs text-muted-fg hover:text-accent transition-colors"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="12"
+                      height="12"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="M15 3h6v6" />
+                      <path d="M10 14 21 3" />
+                      <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                    </svg>
+                    {item.source.title} — {item.source.publisher}
+                  </a>
+                </Card>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* 大额交易 */}
+        {report.large_deals?.length > 0 && (
+          <section className="mb-14">
+            <SectionHeader
+              title="大额交易"
+              count={report.large_deals.length}
+            />
+            <div className="rounded-xl border border-border bg-surface overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-border bg-background">
+                      <th className="text-left px-5 py-3 text-xs font-semibold uppercase tracking-wider text-muted-fg">
+                        时间
+                      </th>
+                      <th className="text-left px-5 py-3 text-xs font-semibold uppercase tracking-wider text-muted-fg">
+                        签约方
+                      </th>
+                      <th className="text-left px-5 py-3 text-xs font-semibold uppercase tracking-wider text-muted-fg">
+                        买方
+                      </th>
+                      <th className="text-left px-5 py-3 text-xs font-semibold uppercase tracking-wider text-muted-fg">
+                        产品/服务
+                      </th>
+                      <th className="text-left px-5 py-3 text-xs font-semibold uppercase tracking-wider text-muted-fg">
+                        金额
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border">
+                    {report.large_deals.map((deal, idx) => (
+                      <tr
+                        key={idx}
+                        className="transition-colors hover:bg-surface-elevated"
+                      >
+                        <td className="px-5 py-3.5 font-mono text-xs text-muted-fg whitespace-nowrap">
+                          {deal.time}
+                        </td>
+                        <td className="px-5 py-3.5 font-medium text-foreground">
+                          {deal.signatory}
+                        </td>
+                        <td className="px-5 py-3.5 text-muted">
+                          {deal.buyer}
+                        </td>
+                        <td className="px-5 py-3.5 text-muted">
+                          {deal.product_or_service}
+                        </td>
+                        <td className="px-5 py-3.5">
+                          <span className="inline-flex items-center rounded-md bg-accent/10 px-2 py-0.5 text-xs font-medium text-accent">
+                            {deal.amount_range}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </section>
+        )}
+
+        {/* 研报观点 */}
+        {report.research_views && (
+          <section className="mb-14">
+            <SectionHeader title="研报观点" />
+            <Card className="relative overflow-hidden">
+              <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-accent/40 via-accent/10 to-transparent" />
+              <div className="flex items-center gap-2 mb-4">
+                <Badge
+                  variant={
+                    report.research_views.has_new_report ? "success" : "muted"
+                  }
+                >
+                  {report.research_views.has_new_report
+                    ? "有新报告"
+                    : "无新报告"}
+                </Badge>
+              </div>
+              <div className="space-y-4">
+                <div>
+                  <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-fg mb-1.5">
+                    核心结论
+                  </h4>
+                  <p className="text-sm leading-relaxed text-muted">
+                    {report.research_views.core_conclusion}
+                  </p>
                 </div>
-                <div className="font-medium mb-1">{item.company_or_institution}</div>
-                <div className="text-gray-700 mb-2">{item.summary}</div>
-                <div className="text-sm text-gray-600 bg-gray-50 p-2 rounded mb-2">
-                  <span className="font-medium">影响评估：</span>
-                  {item.impact_assessment}
+                <div>
+                  <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-fg mb-1.5">
+                    行业判断
+                  </h4>
+                  <p className="text-sm leading-relaxed text-muted">
+                    {report.research_views.industry_judgement}
+                  </p>
                 </div>
                 <a
-                  href={item.source.url}
+                  href={report.research_views.source.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-sm text-blue-600 hover:underline"
+                  className="group/link inline-flex items-center gap-1.5 text-xs text-muted-fg hover:text-accent transition-colors pt-2"
                 >
-                  {item.source.title} — {item.source.publisher}
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="12"
+                    height="12"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M15 3h6v6" />
+                    <path d="M10 14 21 3" />
+                    <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                  </svg>
+                  {report.research_views.source.title} —{" "}
+                  {report.research_views.source.publisher}
                 </a>
               </div>
-            ))}
-          </div>
-        </section>
-      )}
+            </Card>
+          </section>
+        )}
 
-      {/* 大额交易 */}
-      {report.large_deals?.length > 0 && (
-        <section className="mb-10">
-          <h2 className="text-lg font-semibold mb-4 border-b pb-2">大额交易</h2>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="text-left px-4 py-2 font-medium">时间</th>
-                  <th className="text-left px-4 py-2 font-medium">签约方</th>
-                  <th className="text-left px-4 py-2 font-medium">买方</th>
-                  <th className="text-left px-4 py-2 font-medium">产品/服务</th>
-                  <th className="text-left px-4 py-2 font-medium">金额</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y">
-                {report.large_deals.map((deal, idx) => (
-                  <tr key={idx}>
-                    <td className="px-4 py-2">{deal.time}</td>
-                    <td className="px-4 py-2">{deal.signatory}</td>
-                    <td className="px-4 py-2">{deal.buyer}</td>
-                    <td className="px-4 py-2">{deal.product_or_service}</td>
-                    <td className="px-4 py-2">{deal.amount_range}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </section>
-      )}
-
-      {/* 研报观点 */}
-      {report.research_views && (
-        <section className="mb-10">
-          <h2 className="text-lg font-semibold mb-4 border-b pb-2">研报观点</h2>
-          <div className="bg-gray-50 rounded-lg p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <span className="px-2 py-0.5 bg-purple-100 text-purple-700 rounded text-xs">
-                {report.research_views.has_new_report ? "有新报告" : "无新报告"}
-              </span>
-            </div>
-            <div className="mb-2">
-              <span className="font-medium">核心结论：</span>
-              {report.research_views.core_conclusion}
-            </div>
-            <div className="mb-3">
-              <span className="font-medium">行业判断：</span>
-              {report.research_views.industry_judgement}
-            </div>
-            <a
-              href={report.research_views.source.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-sm text-blue-600 hover:underline"
-            >
-              {report.research_views.source.title} — {report.research_views.source.publisher}
-            </a>
-          </div>
-        </section>
-      )}
-
-      {/* 观察清单 */}
-      {report.watchlist_companies?.length > 0 && (
-        <section className="mb-10">
-          <h2 className="text-lg font-semibold mb-4 border-b pb-2">观察清单</h2>
-          <div className="grid gap-3 md:grid-cols-2">
-            {report.watchlist_companies.map((item, idx) => (
-              <div key={idx} className="border rounded-lg p-4">
-                <div className="font-medium mb-1">{item.company}</div>
-                <div className="text-sm text-gray-600 mb-1">
-                  <span className="font-medium">跟踪理由：</span>
-                  {item.tracking_reason}
-                </div>
-                <div className="text-sm text-gray-600">
-                  <span className="font-medium">关键指标：</span>
-                  {item.key_metrics}
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* 下周关注 */}
-      {report.next_week_focus && (
-        <section className="mb-10">
-          <h2 className="text-lg font-semibold mb-4 border-b pb-2">下周关注</h2>
-          <div className="grid gap-4 md:grid-cols-2">
-            {[
-              { title: "会议/事件", items: report.next_week_focus.meetings_events },
-              { title: "政策/监管", items: report.next_week_focus.policy_regulation },
-              { title: "技术指标", items: report.next_week_focus.technical_metrics },
-              { title: "市场/资本", items: report.next_week_focus.market_capital },
-            ].map(
-              (section) =>
-                section.items?.length > 0 && (
-                  <div key={section.title} className="bg-gray-50 rounded-lg p-4">
-                    <h3 className="font-medium mb-2">{section.title}</h3>
-                    <ul className="list-disc list-inside text-sm text-gray-700 space-y-1">
-                      {section.items.map((item, idx) => (
-                        <li key={idx}>{item}</li>
-                      ))}
-                    </ul>
+        {/* 观察清单 */}
+        {report.watchlist_companies?.length > 0 && (
+          <section className="mb-14">
+            <SectionHeader
+              title="观察清单"
+              count={report.watchlist_companies.length}
+            />
+            <div className="grid gap-3 md:grid-cols-2">
+              {report.watchlist_companies.map((item, idx) => (
+                <Card
+                  key={idx}
+                  className="relative overflow-hidden group"
+                >
+                  <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-accent/60 to-accent/10" />
+                  <div className="pl-3">
+                    <h3 className="text-base font-semibold text-foreground mb-3">
+                      {item.company}
+                    </h3>
+                    <div className="space-y-2.5">
+                      <div>
+                        <span className="text-xs font-semibold uppercase tracking-wider text-muted-fg">
+                          跟踪理由
+                        </span>
+                        <p className="text-sm text-muted mt-1 leading-relaxed">
+                          {item.tracking_reason}
+                        </p>
+                      </div>
+                      <div>
+                        <span className="text-xs font-semibold uppercase tracking-wider text-muted-fg">
+                          关键指标
+                        </span>
+                        <p className="text-sm text-muted mt-1 leading-relaxed">
+                          {item.key_metrics}
+                        </p>
+                      </div>
+                    </div>
                   </div>
-                )
-            )}
-          </div>
-        </section>
-      )}
+                </Card>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* 下周关注 */}
+        {report.next_week_focus && (
+          <section className="mb-14">
+            <SectionHeader title="下周关注" />
+            <div className="grid gap-3 md:grid-cols-2">
+              {(
+                [
+                  {
+                    title: "会议 / 事件",
+                    icon: (
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <rect width="18" height="18" x="3" y="4" rx="2" />
+                        <path d="M16 2v4" />
+                        <path d="M8 2v4" />
+                        <path d="M3 10h18" />
+                      </svg>
+                    ),
+                    items: report.next_week_focus.meetings_events,
+                    accent: "text-accent",
+                  },
+                  {
+                    title: "政策 / 监管",
+                    icon: (
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <path d="m12 14 4-4" />
+                        <path d="M3.34 19a10 10 0 1 1 17.32 0" />
+                      </svg>
+                    ),
+                    items: report.next_week_focus.policy_regulation,
+                    accent: "text-success",
+                  },
+                  {
+                    title: "技术指标",
+                    icon: (
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <path d="M12 2v20" />
+                        <path d="m17 7-5-5-5 5" />
+                        <path d="m17 17-5 5-5-5" />
+                      </svg>
+                    ),
+                    items: report.next_week_focus.technical_metrics,
+                    accent: "text-info",
+                  },
+                  {
+                    title: "市场 / 资本",
+                    icon: (
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <line x1="12" x2="12" y1="2" y2="22" />
+                        <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+                      </svg>
+                    ),
+                    items: report.next_week_focus.market_capital,
+                    accent: "text-danger",
+                  },
+                ] as const
+              ).map(
+                (section) =>
+                  section.items?.length > 0 && (
+                    <Card
+                      key={section.title}
+                      className="relative overflow-hidden"
+                    >
+                      <div className="flex items-center gap-2 mb-4">
+                        <span className={`${section.accent}`}>{section.icon}</span>
+                        <h3 className="text-sm font-semibold text-foreground">
+                          {section.title}
+                        </h3>
+                      </div>
+                      <ul className="space-y-2.5">
+                        {section.items.map((item, idx) => (
+                          <li
+                            key={idx}
+                            className="flex gap-2.5 text-sm text-muted"
+                          >
+                            <span className="mt-1.5 w-1 h-1 rounded-full bg-border-subtle shrink-0" />
+                            <span className="leading-relaxed">{item}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </Card>
+                  )
+              )}
+            </div>
+          </section>
+        )}
+      </div>
     </main>
   );
 }
