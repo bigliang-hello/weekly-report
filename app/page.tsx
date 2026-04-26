@@ -8,11 +8,12 @@ function ReportCard({
 }: {
   report: Awaited<ReturnType<typeof getAllReports>>[number];
 }) {
-  const dateLabel = new Date(report.created_at).toLocaleDateString("zh-CN", {
+  const dateLabel = new Date(report.created_at + " UTC").toLocaleDateString("zh-CN", {
     month: "short",
     day: "numeric",
     hour: "2-digit",
     minute: "2-digit",
+    timeZone: "Asia/Shanghai",
   });
 
   const title = `${report.time_range.start} ~ ${report.time_range.end} 周报`;

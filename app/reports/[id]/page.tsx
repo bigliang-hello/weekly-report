@@ -214,7 +214,7 @@ export default async function ReportDetailPage({ params }: Props) {
             <Badge variant="accent">{report.report_type}</Badge>
             <span className="text-muted-fg">
               创建于{" "}
-              {new Date(report.created_at).toLocaleString("zh-CN")}
+              {new Date(report.created_at + " UTC").toLocaleString("zh-CN")}
             </span>
           </div>
 
