@@ -1,8 +1,10 @@
 import Link from "next/link";
 import { getAllReports } from "@/lib/db";
 
-export default function HomePage() {
-  const reports = getAllReports();
+export const dynamic = "force-dynamic";
+
+export default async function HomePage() {
+  const reports = await getAllReports();
 
   return (
     <main className="max-w-5xl mx-auto px-4 py-8">

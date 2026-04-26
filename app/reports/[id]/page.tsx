@@ -2,6 +2,8 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { getReportById } from "@/lib/db";
 
+export const dynamic = "force-dynamic";
+
 interface Props {
   params: Promise<{ id: string }>;
 }
@@ -11,7 +13,7 @@ export default async function ReportDetailPage({ params }: Props) {
   const reportId = Number(id);
   if (Number.isNaN(reportId)) notFound();
 
-  const report = getReportById(reportId);
+  const report = await getReportById(reportId);
   if (!report) notFound();
 
   return (

@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const id = insertReport(body);
+    const id = await insertReport(body);
 
     return NextResponse.json(
       { success: true, id, message: "Report saved successfully" },
