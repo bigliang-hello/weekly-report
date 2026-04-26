@@ -8,6 +8,15 @@ interface Props {
   params: Promise<{ id: string }>;
 }
 
+const SECTIONS = [
+  { id: "executive-summary", label: "执行摘要" },
+  { id: "event-list", label: "事件列表" },
+  { id: "large-deals", label: "大额交易" },
+  { id: "research-views", label: "研报观点" },
+  { id: "watchlist", label: "观察清单" },
+  { id: "next-week", label: "下周关注" },
+] as const;
+
 function SectionHeader({ title, count }: { title: string; count?: number }) {
   return (
     <div className="flex items-center gap-3 mb-5">
@@ -108,35 +117,74 @@ export default async function ReportDetailPage({ params }: Props) {
 
   const reportTitle = `${report.time_range.start} ~ ${report.time_range.end} 周报`;
 
+  const hasExecutiveSummary = report.executive_summary?.length > 0;
+  const hasEventList = report.event_list?.length > 0;
+  const hasLargeDeals = report.large_deals?.length > 0;
+  const hasResearchViews = !!report.research_views;
+  const hasWatchlist = report.watchlist_companies?.length > 0;
+  const hasNextWeek =
+    report.next_week_focus &&
+    (report.next_week_focus.meetings_events?.length > 0 ||
+      report.next_week_focus.policy_regulation?.length > 0 ||
+      report.next_week_focus.technical_metrics?.length > 0 ||
+      report.next_week_focus.market_capital?.length > 0);
+
+  const activeSections = SECTIONS.filter((s) => {
+    if (s.id === "executive-summary") return hasExecutiveSummary;
+    if (s.id === "event-list") return hasEventList;
+    if (s.id === "large-deals") return hasLargeDeals;
+    if (s.id === "research-views") return hasResearchViews;
+    if (s.id === "watchlist") return hasWatchlist;
+    if (s.id === "next-week") return hasNextWeek;
+    return false;
+  });
+
   return (
     <main className="min-h-screen bg-background">
       {/* Sticky nav */}
       <nav className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-md">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
-          <Link
-            href="/"
-            className="group inline-flex items-center gap-2 text-sm text-muted hover:text-foreground transition-colors"
-          >
-            <span className="inline-flex items-center justify-center rounded-lg bg-surface border border-border w-8 h-8 transition-colors group-hover:border-neutral-300 group-hover:bg-neutral-50">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="m15 18-6-6 6-6" />
-              </svg>
+        <div className="max-w-5xl mx-auto px-4 sm:px-6">
+          {/* Top row: back + title */}
+          <div className="flex items-center justify-between py-3">
+            <Link
+              href="/"
+              className="group inline-flex items-center gap-2 text-sm text-muted hover:text-foreground transition-colors"
+            >
+              <span className="inline-flex items-center justify-center rounded-lg bg-surface border border-border w-8 h-8 transition-colors group-hover:border-neutral-300 group-hover:bg-neutral-50">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="m15 18-6-6 6-6" />
+                </svg>
+              </span>
+              <span className="hidden sm:inline">返回列表</span>
+            </Link>
+            <span className="text-xs font-mono text-muted-fg">
+              #{report.id}
             </span>
-            <span className="hidden sm:inline">返回列表</span>
-          </Link>
-          <span className="text-xs font-mono text-muted-fg">
-            #{report.id}
-          </span>
+          </div>
+          {/* Tab row: scrollable */}
+          {activeSections.length > 0 && (
+            <div className="flex items-center gap-1 overflow-x-auto pb-3 scrollbar-none">
+              {activeSections.map((s) => (
+                <a
+                  key={s.id}
+                  href={`#${s.id}`}
+                  className="shrink-0 inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-lg border border-border bg-surface text-muted hover:text-foreground hover:border-neutral-300 transition-colors"
+                >
+                  {s.label}
+                </a>
+              ))}
+            </div>
+          )}
         </div>
       </nav>
 
@@ -185,15 +233,15 @@ export default async function ReportDetailPage({ params }: Props) {
           )}
         </header>
 
-        {/* 高管摘要 */}
-        {report.executive_summary?.length > 0 && (
-          <section className="mb-14">
+        {/* 执行摘要 */}
+        {hasExecutiveSummary && (
+          <section id="executive-summary" className="mb-14 scroll-mt-36">
             <SectionHeader
-              title="高管摘要"
-              count={report.executive_summary.length}
+              title="执行摘要"
+              count={report.executive_summary!.length}
             />
             <div className="space-y-3">
-              {report.executive_summary.map((item, idx) => (
+              {report.executive_summary!.map((item, idx) => (
                 <Card key={idx}>
                   <div className="flex flex-wrap items-center gap-2 mb-2">
                     <Badge variant="accent">{item.event_type}</Badge>
@@ -214,14 +262,14 @@ export default async function ReportDetailPage({ params }: Props) {
         )}
 
         {/* 事件列表 */}
-        {report.event_list?.length > 0 && (
-          <section className="mb-14">
+        {hasEventList && (
+          <section id="event-list" className="mb-14 scroll-mt-36">
             <SectionHeader
               title="事件列表"
-              count={report.event_list.length}
+              count={report.event_list!.length}
             />
             <div className="space-y-4">
-              {report.event_list.map((item, idx) => (
+              {report.event_list!.map((item, idx) => (
                 <Card key={idx} className="relative overflow-hidden">
                   <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-accent/40 via-accent/10 to-transparent" />
                   <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
@@ -272,13 +320,13 @@ export default async function ReportDetailPage({ params }: Props) {
         )}
 
         {/* 大额交易 */}
-        {report.large_deals?.length > 0 && (
-          <section className="mb-14">
+        {hasLargeDeals && (
+          <section id="large-deals" className="mb-14 scroll-mt-36">
             <SectionHeader
               title="大额交易"
-              count={report.large_deals.length}
+              count={report.large_deals!.length}
             />
-            <div className="rounded-xl border border-border bg-surface overflow-hidden">
+            <div className="rounded-xl border border-border bg-surface overflow-hidden mb-3">
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
@@ -301,7 +349,7 @@ export default async function ReportDetailPage({ params }: Props) {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border">
-                    {report.large_deals.map((deal, idx) => (
+                    {report.large_deals!.map((deal, idx) => (
                       <tr
                         key={idx}
                         className="transition-colors hover:bg-neutral-50"
@@ -329,8 +377,8 @@ export default async function ReportDetailPage({ params }: Props) {
                 </table>
               </div>
             </div>
-            <div className="mt-3 space-y-2">
-              {report.large_deals.map((deal, idx) => (
+            <div className="space-y-2">
+              {report.large_deals!.map((deal, idx) => (
                 <SourceLink
                   key={idx}
                   url={deal.source.url}
@@ -343,18 +391,18 @@ export default async function ReportDetailPage({ params }: Props) {
         )}
 
         {/* 研报观点 */}
-        {report.research_views && (
-          <section className="mb-14">
+        {hasResearchViews && (
+          <section id="research-views" className="mb-14 scroll-mt-36">
             <SectionHeader title="研报观点" />
             <Card className="relative overflow-hidden">
               <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-accent/40 via-accent/10 to-transparent" />
               <div className="flex items-center gap-2 mb-4">
                 <Badge
                   variant={
-                    report.research_views.has_new_report ? "success" : "muted"
+                    report.research_views!.has_new_report ? "success" : "muted"
                   }
                 >
-                  {report.research_views.has_new_report
+                  {report.research_views!.has_new_report
                     ? "有新报告"
                     : "无新报告"}
                 </Badge>
@@ -365,7 +413,7 @@ export default async function ReportDetailPage({ params }: Props) {
                     核心结论
                   </h4>
                   <p className="text-sm leading-relaxed text-muted">
-                    {report.research_views.core_conclusion}
+                    {report.research_views!.core_conclusion}
                   </p>
                 </div>
                 <div>
@@ -373,13 +421,13 @@ export default async function ReportDetailPage({ params }: Props) {
                     行业判断
                   </h4>
                   <p className="text-sm leading-relaxed text-muted">
-                    {report.research_views.industry_judgement}
+                    {report.research_views!.industry_judgement}
                   </p>
                 </div>
                 <SourceLink
-                  url={report.research_views.source.url}
-                  title={report.research_views.source.title}
-                  publisher={report.research_views.source.publisher}
+                  url={report.research_views!.source.url}
+                  title={report.research_views!.source.title}
+                  publisher={report.research_views!.source.publisher}
                 />
               </div>
             </Card>
@@ -387,14 +435,14 @@ export default async function ReportDetailPage({ params }: Props) {
         )}
 
         {/* 观察清单 */}
-        {report.watchlist_companies?.length > 0 && (
-          <section className="mb-14">
+        {hasWatchlist && (
+          <section id="watchlist" className="mb-14 scroll-mt-36">
             <SectionHeader
               title="观察清单"
-              count={report.watchlist_companies.length}
+              count={report.watchlist_companies!.length}
             />
             <div className="grid gap-3 md:grid-cols-2">
-              {report.watchlist_companies.map((item, idx) => (
+              {report.watchlist_companies!.map((item, idx) => (
                 <Card
                   key={idx}
                   className="relative overflow-hidden group"
@@ -430,8 +478,8 @@ export default async function ReportDetailPage({ params }: Props) {
         )}
 
         {/* 下周关注 */}
-        {report.next_week_focus && (
-          <section className="mb-14">
+        {hasNextWeek && (
+          <section id="next-week" className="mb-14 scroll-mt-36">
             <SectionHeader title="下周关注" />
             <div className="grid gap-3 md:grid-cols-2">
               {(
@@ -456,7 +504,7 @@ export default async function ReportDetailPage({ params }: Props) {
                         <path d="M3 10h18" />
                       </svg>
                     ),
-                    items: report.next_week_focus.meetings_events,
+                    items: report.next_week_focus!.meetings_events,
                     accent: "text-accent",
                   },
                   {
@@ -477,7 +525,7 @@ export default async function ReportDetailPage({ params }: Props) {
                         <path d="M3.34 19a10 10 0 1 1 17.32 0" />
                       </svg>
                     ),
-                    items: report.next_week_focus.policy_regulation,
+                    items: report.next_week_focus!.policy_regulation,
                     accent: "text-success",
                   },
                   {
@@ -499,7 +547,7 @@ export default async function ReportDetailPage({ params }: Props) {
                         <path d="m17 17-5 5-5-5" />
                       </svg>
                     ),
-                    items: report.next_week_focus.technical_metrics,
+                    items: report.next_week_focus!.technical_metrics,
                     accent: "text-info",
                   },
                   {
@@ -520,7 +568,7 @@ export default async function ReportDetailPage({ params }: Props) {
                         <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
                       </svg>
                     ),
-                    items: report.next_week_focus.market_capital,
+                    items: report.next_week_focus!.market_capital,
                     accent: "text-danger",
                   },
                 ] as const
@@ -532,7 +580,7 @@ export default async function ReportDetailPage({ params }: Props) {
                       className="relative overflow-hidden"
                     >
                       <div className="flex items-center gap-2 mb-4">
-                        <span className={`${section.accent}`}>{section.icon}</span>
+                        <span className={section.accent}>{section.icon}</span>
                         <h3 className="text-sm font-semibold text-foreground">
                           {section.title}
                         </h3>
