@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { getReportById } from "@/lib/db";
+import { getReportByIdWithModeration } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
@@ -112,7 +112,7 @@ export default async function ReportDetailPage({ params }: Props) {
   const reportId = Number(id);
   if (Number.isNaN(reportId)) notFound();
 
-  const report = await getReportById(reportId);
+  const report = await getReportByIdWithModeration(reportId);
   if (!report) notFound();
 
   const reportTitle = `${report.time_range.start} ~ ${report.time_range.end} 周报`;
