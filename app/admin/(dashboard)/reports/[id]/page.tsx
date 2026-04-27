@@ -10,7 +10,7 @@ interface Props {
   params: Promise<{ id: string }>;
 }
 
-function checkHidden(
+function isHiddenBy(
   moderation: ModerationRecord[],
   section: string,
   index: number,
@@ -25,19 +25,65 @@ function checkHidden(
   );
 }
 
-function getReason(
-  moderation: ModerationRecord[],
-  section: string,
-  index: number,
-  subSection?: string | null
-) {
-  const m = moderation.find(
-    (m) =>
-      m.section === section &&
-      m.item_index === index &&
-      m.sub_section === (subSection ?? null)
+
+
+function SectionCard({
+  children,
+  hidden,
+}: {
+  children: React.ReactNode;
+  hidden: boolean;
+}) {
+  return (
+    <div
+      className={`
+        rounded-xl border transition-all duration-200
+        ${hidden
+          ? "border-[var(--color-danger)]/30 bg-[var(--color-danger)]/5 opacity-80"
+          : "border-[var(--color-border)] bg-[var(--color-surface)]"
+        }
+      `}
+    >
+      {children}
+    </div>
   );
-  return m?.reason ?? null;
+}
+
+function SectionHeader({
+  title,
+  total,
+  hidden,
+  accentColor = "accent",
+}: {
+  title: string;
+  total: number;
+  hidden: number;
+  accentColor?: "accent" | "success" | "info" | "danger";
+}) {
+  const colors = {
+    accent: "bg-[var(--color-accent)]",
+    success: "bg-[var(--color-success)]",
+    info: "bg-[var(--color-info)]",
+    danger: "bg-[var(--color-danger)]",
+  };
+  return (
+    <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center gap-3">
+        <div className={`w-1 h-5 rounded-full ${colors[accentColor]}`} />
+        <h2 className="text-[15px] font-bold text-[var(--color-foreground)]">
+          {title}
+        </h2>
+        <span className="text-xs text-[var(--color-muted)] font-mono">
+          {total} 条
+        </span>
+      </div>
+      {hidden > 0 && (
+        <span className="text-xs text-[var(--color-danger)] font-semibold bg-[var(--color-danger)]/10 px-2 py-0.5 rounded-full">
+          {hidden} 已下架
+        </span>
+      )}
+    </div>
+  );
 }
 
 export default async function AdminReportReviewPage({ params }: Props) {
@@ -54,656 +100,361 @@ export default async function AdminReportReviewPage({ params }: Props) {
 
   const reportTitle = `${report.time_range.start} ~ ${report.time_range.end} 周报`;
 
-  // Count totals and hidden
-  let totalItems = 0;
-  let hiddenItems = 0;
+  // Compute section stats
+  const execTotal = report.executive_summary.length;
+  const execHidden = report.executive_summary.filter((_, i) => isHiddenBy(moderation, "executive_summary", i)).length;
 
-  const sections = [] as {
-    id: string;
-    label: string;
-    count: number;
-    hiddenCount: number;
-  }[];
+  const eventTotal = report.event_list.length;
+  const eventHidden = report.event_list.filter((_, i) => isHiddenBy(moderation, "event_list", i)).length;
 
-  const execHidden = report.executive_summary.filter((_, i) =>
-    checkHidden(moderation, "executive_summary", i)
-  ).length;
-  totalItems += report.executive_summary.length;
-  hiddenItems += execHidden;
-  if (report.executive_summary.length > 0) {
-    sections.push({
-      id: "executive-summary",
-      label: "执行摘要",
-      count: report.executive_summary.length,
-      hiddenCount: execHidden,
-    });
-  }
+  const dealsTotal = report.large_deals.length;
+  const dealsHidden = report.large_deals.filter((_, i) => isHiddenBy(moderation, "large_deals", i)).length;
 
-  const eventHidden = report.event_list.filter((_, i) =>
-    checkHidden(moderation, "event_list", i)
-  ).length;
-  totalItems += report.event_list.length;
-  hiddenItems += eventHidden;
-  if (report.event_list.length > 0) {
-    sections.push({
-      id: "event-list",
-      label: "事件列表",
-      count: report.event_list.length,
-      hiddenCount: eventHidden,
-    });
-  }
+  const hasResearch = !!report.research_views;
+  const researchHidden = hasResearch && isHiddenBy(moderation, "research_views", 0) ? 1 : 0;
 
-  const dealsHidden = report.large_deals.filter((_, i) =>
-    checkHidden(moderation, "large_deals", i)
-  ).length;
-  totalItems += report.large_deals.length;
-  hiddenItems += dealsHidden;
-  if (report.large_deals.length > 0) {
-    sections.push({
-      id: "large-deals",
-      label: "大额交易",
-      count: report.large_deals.length,
-      hiddenCount: dealsHidden,
-    });
-  }
-
-  const researchHidden = report.research_views
-    ? checkHidden(moderation, "research_views", 0)
-      ? 1
-      : 0
-    : 0;
-  totalItems += report.research_views ? 1 : 0;
-  hiddenItems += researchHidden;
-  if (report.research_views) {
-    sections.push({
-      id: "research-views",
-      label: "研报观点",
-      count: 1,
-      hiddenCount: researchHidden,
-    });
-  }
-
-  const watchHidden = report.watchlist_companies.filter((_, i) =>
-    checkHidden(moderation, "watchlist_companies", i)
-  ).length;
-  totalItems += report.watchlist_companies.length;
-  hiddenItems += watchHidden;
-  if (report.watchlist_companies.length > 0) {
-    sections.push({
-      id: "watchlist",
-      label: "观察清单",
-      count: report.watchlist_companies.length,
-      hiddenCount: watchHidden,
-    });
-  }
+  const watchTotal = report.watchlist_companies.length;
+  const watchHidden = report.watchlist_companies.filter((_, i) => isHiddenBy(moderation, "watchlist_companies", i)).length;
 
   const nextWeek = report.next_week_focus;
-  let nextWeekTotal = 0;
-  let nextWeekHidden = 0;
-  const nextWeekSections = [] as {
-    key: string;
-    label: string;
-    items: string[];
-  }[];
-  if (nextWeek) {
-    if (nextWeek.meetings_events.length > 0) {
-      nextWeekTotal += nextWeek.meetings_events.length;
-      nextWeekHidden += nextWeek.meetings_events.filter((_, i) =>
-        checkHidden(moderation, "next_week_focus", i, "meetings_events")
-      ).length;
-      nextWeekSections.push({
-        key: "meetings_events",
-        label: "会议 / 事件",
-        items: nextWeek.meetings_events,
-      });
-    }
-    if (nextWeek.policy_regulation.length > 0) {
-      nextWeekTotal += nextWeek.policy_regulation.length;
-      nextWeekHidden += nextWeek.policy_regulation.filter((_, i) =>
-        checkHidden(moderation, "next_week_focus", i, "policy_regulation")
-      ).length;
-      nextWeekSections.push({
-        key: "policy_regulation",
-        label: "政策 / 监管",
-        items: nextWeek.policy_regulation,
-      });
-    }
-    if (nextWeek.technical_metrics.length > 0) {
-      nextWeekTotal += nextWeek.technical_metrics.length;
-      nextWeekHidden += nextWeek.technical_metrics.filter((_, i) =>
-        checkHidden(moderation, "next_week_focus", i, "technical_metrics")
-      ).length;
-      nextWeekSections.push({
-        key: "technical_metrics",
-        label: "技术指标",
-        items: nextWeek.technical_metrics,
-      });
-    }
-    if (nextWeek.market_capital.length > 0) {
-      nextWeekTotal += nextWeek.market_capital.length;
-      nextWeekHidden += nextWeek.market_capital.filter((_, i) =>
-        checkHidden(moderation, "next_week_focus", i, "market_capital")
-      ).length;
-      nextWeekSections.push({
-        key: "market_capital",
-        label: "市场 / 资本",
-        items: nextWeek.market_capital,
-      });
-    }
-  }
-  totalItems += nextWeekTotal;
-  hiddenItems += nextWeekHidden;
-  if (nextWeekTotal > 0) {
-    sections.push({
-      id: "next-week",
-      label: "下周关注",
-      count: nextWeekTotal,
-      hiddenCount: nextWeekHidden,
-    });
-  }
+  const nextWeekGroups = nextWeek
+    ? ([
+        { key: "meetings_events", label: "会议 / 事件", items: nextWeek.meetings_events, color: "accent" },
+        { key: "policy_regulation", label: "政策 / 监管", items: nextWeek.policy_regulation, color: "success" },
+        { key: "technical_metrics", label: "技术指标", items: nextWeek.technical_metrics, color: "info" },
+        { key: "market_capital", label: "市场 / 资本", items: nextWeek.market_capital, color: "danger" },
+      ].filter((g) => g.items.length > 0) as {
+        key: string;
+        label: string;
+        items: string[];
+        color: "accent" | "success" | "info" | "danger";
+      }[])
+    : [];
+
+  const nextWeekTotal = nextWeekGroups.reduce((acc, g) => acc + g.items.length, 0);
+  const nextWeekHidden = nextWeekGroups.reduce(
+    (acc, g) =>
+      acc +
+      g.items.filter((_, i) => isHiddenBy(moderation, "next_week_focus", i, g.key)).length,
+    0
+  );
+
+  const totalItems =
+    execTotal + eventTotal + dealsTotal + (hasResearch ? 1 : 0) + watchTotal + nextWeekTotal;
+  const totalHidden = execHidden + eventHidden + dealsHidden + researchHidden + watchHidden + nextWeekHidden;
 
   return (
-    <div className="p-6 max-w-5xl mx-auto">
+    <div className="min-h-full">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
-          <Link
-            href="/admin/reports"
-            className="flex items-center gap-1 text-sm text-[var(--color-muted)] hover:text-[var(--color-foreground)] transition-colors"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
+      <div className="px-8 pt-8 pb-6 border-b border-[var(--color-border)]">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Link
+              href="/admin/reports"
+              className="flex items-center gap-1.5 text-sm text-[var(--color-muted)] hover:text-[var(--color-foreground)] transition-colors"
             >
-              <path d="m15 18-6-6 6-6" />
-            </svg>
-            返回列表
-          </Link>
-        </div>
-        <span className="text-xs font-mono text-[var(--color-muted-fg)]">
-          #{report.id}
-        </span>
-      </div>
-
-      <div className="mb-6">
-        <h1 className="text-xl font-bold text-[var(--color-foreground)]">
-          {reportTitle}
-        </h1>
-        <div className="flex items-center gap-3 mt-2 text-sm text-[var(--color-muted)]">
-          <span className="inline-flex items-center rounded-md bg-[var(--color-accent-dim)] px-2 py-0.5 text-xs font-medium text-[var(--color-accent)]">
-            {report.report_type}
-          </span>
-          <span>
-            创建于{" "}
-            {new Date(report.created_at + " UTC").toLocaleString("zh-CN")}
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="15"
+                height="15"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="m15 18-6-6 6-6" />
+              </svg>
+              返回
+            </Link>
+            <span className="text-[var(--color-border)]">/</span>
+            <span className="text-sm font-semibold text-[var(--color-foreground)]">{reportTitle}</span>
+          </div>
+          <span className="font-mono text-xs text-[var(--color-muted-fg)] bg-[var(--color-neutral-100)] px-2 py-1 rounded">
+            #{report.id}
           </span>
         </div>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-3 gap-4 mb-8">
-        <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
-          <div className="text-2xl font-bold text-[var(--color-foreground)]">
-            {totalItems}
+      {/* Stats bar */}
+      <div className="px-8 py-5 border-b border-[var(--color-border)] bg-[var(--color-surface)]">
+        <div className="flex items-center gap-6">
+          <div className="flex items-center gap-2">
+            <span className="text-2xl font-bold font-mono text-[var(--color-foreground)]">{totalItems}</span>
+            <span className="text-xs text-[var(--color-muted)]">总条目</span>
           </div>
-          <div className="text-xs text-[var(--color-muted)] mt-1">总条目</div>
-        </div>
-        <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
-          <div className="text-2xl font-bold text-[var(--color-danger)]">
-            {hiddenItems}
+          <div className="w-px h-6 bg-[var(--color-border)]" />
+          <div className="flex items-center gap-2">
+            <span className="text-2xl font-bold font-mono text-[var(--color-success)]">{totalItems - totalHidden}</span>
+            <span className="text-xs text-[var(--color-muted)]">显示中</span>
           </div>
-          <div className="text-xs text-[var(--color-muted)] mt-1">已下架</div>
-        </div>
-        <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
-          <div className="text-2xl font-bold text-[var(--color-success)]">
-            {totalItems - hiddenItems}
+          <div className="w-px h-6 bg-[var(--color-border)]" />
+          <div className="flex items-center gap-2">
+            <span className="text-2xl font-bold font-mono text-[var(--color-danger)]">{totalHidden}</span>
+            <span className="text-xs text-[var(--color-muted)]">已下架</span>
           </div>
-          <div className="text-xs text-[var(--color-muted)] mt-1">正常显示</div>
+          <div className="ml-auto">
+            <span className="inline-flex items-center rounded-md bg-[var(--color-accent-dim)] px-2.5 py-1 text-xs font-semibold text-[var(--color-accent)] border border-[var(--color-accent)]/20">
+              {report.report_type}
+            </span>
+          </div>
         </div>
       </div>
 
-      {/* Section nav */}
-      {sections.length > 0 && (
-        <div className="flex items-center gap-2 overflow-x-auto pb-4 mb-6 scrollbar-none">
-          {sections.map((s) => (
-            <a
-              key={s.id}
-              href={`#${s.id}`}
-              className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-muted)] hover:text-[var(--color-foreground)] hover:border-[var(--color-border-subtle)] transition-colors"
-            >
-              {s.label}
-              {s.hiddenCount > 0 && (
-                <span className="inline-flex items-center justify-center rounded-full bg-[var(--color-danger)]/10 px-1.5 py-0 text-[10px] font-medium text-[var(--color-danger)]">
-                  {s.hiddenCount}
-                </span>
-              )}
-            </a>
-          ))}
-        </div>
-      )}
+      {/* Content */}
+      <div className="px-8 py-6 space-y-10">
 
-      {/* Executive Summary */}
-      {report.executive_summary.length > 0 && (
-        <section id="executive-summary" className="mb-10">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-1 h-5 rounded-full bg-[var(--color-accent)]" />
-            <h2 className="text-base font-bold text-[var(--color-foreground)]">
-              执行摘要
-            </h2>
-            <span className="text-xs text-[var(--color-muted)]">
-              ({report.executive_summary.length} 条)
-            </span>
-          </div>
-          <div className="space-y-3">
-            {report.executive_summary.map((item, idx) => {
-              const hidden = checkHidden(moderation, "executive_summary", idx);
-              return (
-                <div
-                  key={idx}
-                  className={`rounded-xl border p-4 flex items-start justify-between gap-4 transition-colors ${
-                    hidden
-                      ? "border-[var(--color-danger)]/30 bg-[var(--color-danger)]/5 opacity-60"
-                      : "border-[var(--color-border)] bg-[var(--color-surface)]"
-                  }`}
-                >
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1.5">
-                      <span className="inline-flex items-center rounded-md bg-[var(--color-accent-dim)] px-2 py-0.5 text-xs font-medium text-[var(--color-accent)]">
-                        {item.event_type}
-                      </span>
-                      <span className="text-xs font-mono text-[var(--color-muted-fg)]">
-                        {item.time}
-                      </span>
-                    </div>
-                    <div className="text-sm font-semibold text-[var(--color-foreground)]">
-                      {item.company_or_institution}
-                    </div>
-                    <div className="text-sm text-[var(--color-muted)] mt-1">
-                      {item.core_info}
-                    </div>
-                    {hidden && (
-                      <div className="mt-2 text-xs text-[var(--color-danger)]">
-                        原因：
-                        {getReason(moderation, "executive_summary", idx) ||
-                          "未填写"}
+        {/* Executive Summary */}
+        {execTotal > 0 && (
+          <section>
+            <SectionHeader title="执行摘要" total={execTotal} hidden={execHidden} accentColor="accent" />
+            <div className="space-y-2">
+              {report.executive_summary.map((item, idx) => {
+                const hidden = isHiddenBy(moderation, "executive_summary", idx);
+                return (
+                  <SectionCard key={idx} hidden={hidden}>
+                    <div className="flex items-start justify-between gap-4 p-4">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="inline-flex items-center rounded-md bg-[var(--color-accent-dim)] px-2 py-0.5 text-[11px] font-bold text-[var(--color-accent)] border border-[var(--color-accent)]/20">
+                            {item.event_type}
+                          </span>
+                          <span className="text-[11px] font-mono text-[var(--color-muted-fg)]">{item.date} {item.time}</span>
+                        </div>
+                        <div className="text-[13px] font-semibold text-[var(--color-foreground)] mb-1">{item.company_or_institution}</div>
+                        <div className="text-[13px] text-[var(--color-muted)] leading-relaxed">{item.core_info}</div>
                       </div>
-                    )}
-                  </div>
-                  <div className="shrink-0">
-                    <ModerationToggle
-                      reportId={reportId}
-                      section="executive_summary"
-                      itemIndex={idx}
-                      initialHidden={hidden}
-                      initialReason={getReason(
-                        moderation,
-                        "executive_summary",
-                        idx
-                      )}
-                    />
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </section>
-      )}
-
-      {/* Event List */}
-      {report.event_list.length > 0 && (
-        <section id="event-list" className="mb-10">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-1 h-5 rounded-full bg-[var(--color-accent)]" />
-            <h2 className="text-base font-bold text-[var(--color-foreground)]">
-              事件列表
-            </h2>
-            <span className="text-xs text-[var(--color-muted)]">
-              ({report.event_list.length} 条)
-            </span>
-          </div>
-          <div className="space-y-3">
-            {report.event_list.map((item, idx) => {
-              const hidden = checkHidden(moderation, "event_list", idx);
-              return (
-                <div
-                  key={idx}
-                  className={`rounded-xl border p-4 flex items-start justify-between gap-4 transition-colors ${
-                    hidden
-                      ? "border-[var(--color-danger)]/30 bg-[var(--color-danger)]/5 opacity-60"
-                      : "border-[var(--color-border)] bg-[var(--color-surface)]"
-                  }`}
-                >
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1.5">
-                      <span className="inline-flex items-center rounded-md bg-[var(--color-neutral-100)] px-2 py-0.5 text-xs font-medium text-[var(--color-muted)] border border-[var(--color-border-subtle)]">
-                        {item.event_type}
-                      </span>
-                      <span className="text-xs font-mono text-[var(--color-muted-fg)]">
-                        {item.time}
-                      </span>
-                    </div>
-                    <div className="text-sm font-semibold text-[var(--color-foreground)]">
-                      {item.company_or_institution}
-                    </div>
-                    <div className="text-sm text-[var(--color-muted)] mt-1">
-                      {item.summary}
-                    </div>
-                    {hidden && (
-                      <div className="mt-2 text-xs text-[var(--color-danger)]">
-                        原因：
-                        {getReason(moderation, "event_list", idx) || "未填写"}
-                      </div>
-                    )}
-                  </div>
-                  <div className="shrink-0">
-                    <ModerationToggle
-                      reportId={reportId}
-                      section="event_list"
-                      itemIndex={idx}
-                      initialHidden={hidden}
-                      initialReason={getReason(moderation, "event_list", idx)}
-                    />
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </section>
-      )}
-
-      {/* Large Deals */}
-      {report.large_deals.length > 0 && (
-        <section id="large-deals" className="mb-10">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-1 h-5 rounded-full bg-[var(--color-accent)]" />
-            <h2 className="text-base font-bold text-[var(--color-foreground)]">
-              大额交易
-            </h2>
-            <span className="text-xs text-[var(--color-muted)]">
-              ({report.large_deals.length} 条)
-            </span>
-          </div>
-          <div className="space-y-3">
-            {report.large_deals.map((item, idx) => {
-              const hidden = checkHidden(moderation, "large_deals", idx);
-              return (
-                <div
-                  key={idx}
-                  className={`rounded-xl border p-4 flex items-start justify-between gap-4 transition-colors ${
-                    hidden
-                      ? "border-[var(--color-danger)]/30 bg-[var(--color-danger)]/5 opacity-60"
-                      : "border-[var(--color-border)] bg-[var(--color-surface)]"
-                  }`}
-                >
-                  <div className="flex-1 min-w-0">
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
-                      <div>
-                        <div className="text-xs text-[var(--color-muted-fg)] mb-0.5">
-                          签约方
-                        </div>
-                        <div className="font-medium text-[var(--color-foreground)]">
-                          {item.signatory}
-                        </div>
-                      </div>
-                      <div>
-                        <div className="text-xs text-[var(--color-muted-fg)] mb-0.5">
-                          买方
-                        </div>
-                        <div className="text-[var(--color-foreground)]">
-                          {item.buyer}
-                        </div>
-                      </div>
-                      <div>
-                        <div className="text-xs text-[var(--color-muted-fg)] mb-0.5">
-                          产品/服务
-                        </div>
-                        <div className="text-[var(--color-foreground)]">
-                          {item.product_or_service}
-                        </div>
-                      </div>
-                      <div>
-                        <div className="text-xs text-[var(--color-muted-fg)] mb-0.5">
-                          金额
-                        </div>
-                        <div className="inline-flex items-center rounded-md bg-[var(--color-accent-dim)] px-2 py-0.5 text-xs font-medium text-[var(--color-accent)]">
-                          {item.amount_range}
-                        </div>
+                      <div className="shrink-0 pt-1">
+                        <ModerationToggle
+                          reportId={reportId}
+                          section="executive_summary"
+                          itemIndex={idx}
+                          initialHidden={hidden}
+                        />
                       </div>
                     </div>
-                    {hidden && (
-                      <div className="mt-2 text-xs text-[var(--color-danger)]">
-                        原因：
-                        {getReason(moderation, "large_deals", idx) || "未填写"}
-                      </div>
-                    )}
-                  </div>
-                  <div className="shrink-0">
-                    <ModerationToggle
-                      reportId={reportId}
-                      section="large_deals"
-                      itemIndex={idx}
-                      initialHidden={hidden}
-                      initialReason={getReason(moderation, "large_deals", idx)}
-                    />
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </section>
-      )}
-
-      {/* Research Views */}
-      {report.research_views && (
-        <section id="research-views" className="mb-10">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-1 h-5 rounded-full bg-[var(--color-accent)]" />
-            <h2 className="text-base font-bold text-[var(--color-foreground)]">
-              研报观点
-            </h2>
-          </div>
-          <div
-            className={`rounded-xl border p-4 flex items-start justify-between gap-4 transition-colors ${
-              checkHidden(moderation, "research_views", 0)
-                ? "border-[var(--color-danger)]/30 bg-[var(--color-danger)]/5 opacity-60"
-                : "border-[var(--color-border)] bg-[var(--color-surface)]"
-            }`}
-          >
-            <div className="flex-1 min-w-0">
-              <div className="space-y-3">
-                <div>
-                  <div className="text-xs font-semibold text-[var(--color-muted-fg)] mb-1">
-                    核心结论
-                  </div>
-                  <div className="text-sm text-[var(--color-muted)]">
-                    {report.research_views.core_conclusion}
-                  </div>
-                </div>
-                <div>
-                  <div className="text-xs font-semibold text-[var(--color-muted-fg)] mb-1">
-                    行业判断
-                  </div>
-                  <div className="text-sm text-[var(--color-muted)]">
-                    {report.research_views.industry_judgement}
-                  </div>
-                </div>
-              </div>
-              {checkHidden(moderation, "research_views", 0) && (
-                <div className="mt-2 text-xs text-[var(--color-danger)]">
-                  原因：
-                  {getReason(moderation, "research_views", 0) || "未填写"}
-                </div>
-              )}
+                  </SectionCard>
+                );
+              })}
             </div>
-            <div className="shrink-0">
-              <ModerationToggle
-                reportId={reportId}
-                section="research_views"
-                itemIndex={0}
-                initialHidden={checkHidden(moderation, "research_views", 0)}
-                initialReason={getReason(moderation, "research_views", 0)}
-              />
-            </div>
-          </div>
-        </section>
-      )}
+          </section>
+        )}
 
-      {/* Watchlist */}
-      {report.watchlist_companies.length > 0 && (
-        <section id="watchlist" className="mb-10">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-1 h-5 rounded-full bg-[var(--color-accent)]" />
-            <h2 className="text-base font-bold text-[var(--color-foreground)]">
-              观察清单
-            </h2>
-            <span className="text-xs text-[var(--color-muted)]">
-              ({report.watchlist_companies.length} 条)
-            </span>
-          </div>
-          <div className="space-y-3">
-            {report.watchlist_companies.map((item, idx) => {
-              const hidden = checkHidden(moderation, "watchlist_companies", idx);
-              return (
-                <div
-                  key={idx}
-                  className={`rounded-xl border p-4 flex items-start justify-between gap-4 transition-colors ${
-                    hidden
-                      ? "border-[var(--color-danger)]/30 bg-[var(--color-danger)]/5 opacity-60"
-                      : "border-[var(--color-border)] bg-[var(--color-surface)]"
-                  }`}
-                >
-                  <div className="flex-1 min-w-0">
-                    <div className="text-sm font-semibold text-[var(--color-foreground)] mb-2">
-                      {item.company}
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
-                      <div>
-                        <div className="text-xs text-[var(--color-muted-fg)] mb-0.5">
-                          跟踪理由
+        {/* Event List */}
+        {eventTotal > 0 && (
+          <section>
+            <SectionHeader title="事件列表" total={eventTotal} hidden={eventHidden} accentColor="info" />
+            <div className="space-y-2">
+              {report.event_list.map((item, idx) => {
+                const hidden = isHiddenBy(moderation, "event_list", idx);
+                return (
+                  <SectionCard key={idx} hidden={hidden}>
+                    <div className="flex items-start justify-between gap-4 p-4">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="inline-flex items-center rounded-md bg-[var(--color-neutral-100)] px-2 py-0.5 text-[11px] font-semibold text-[var(--color-muted)] border border-[var(--color-border)]">
+                            {item.event_type}
+                          </span>
+                          <span className="text-[11px] font-mono text-[var(--color-muted-fg)]">{item.time}</span>
+                          <span className="text-[11px] text-[var(--color-muted)] bg-[var(--color-neutral-100)] px-1.5 py-0.5 rounded border border-[var(--color-border)]">
+                            可信度 {item.credibility}
+                          </span>
                         </div>
-                        <div className="text-[var(--color-muted)]">
-                          {item.tracking_reason}
-                        </div>
-                      </div>
-                      <div>
-                        <div className="text-xs text-[var(--color-muted-fg)] mb-0.5">
-                          关键指标
-                        </div>
-                        <div className="text-[var(--color-muted)]">
-                          {item.key_metrics}
-                        </div>
-                      </div>
-                    </div>
-                    {hidden && (
-                      <div className="mt-2 text-xs text-[var(--color-danger)]">
-                        原因：
-                        {getReason(moderation, "watchlist_companies", idx) ||
-                          "未填写"}
-                      </div>
-                    )}
-                  </div>
-                  <div className="shrink-0">
-                    <ModerationToggle
-                      reportId={reportId}
-                      section="watchlist_companies"
-                      itemIndex={idx}
-                      initialHidden={hidden}
-                      initialReason={getReason(
-                        moderation,
-                        "watchlist_companies",
-                        idx
-                      )}
-                    />
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </section>
-      )}
-
-      {/* Next Week Focus */}
-      {nextWeekSections.length > 0 && (
-        <section id="next-week" className="mb-10">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-1 h-5 rounded-full bg-[var(--color-accent)]" />
-            <h2 className="text-base font-bold text-[var(--color-foreground)]">
-              下周关注
-            </h2>
-            <span className="text-xs text-[var(--color-muted)]">
-              ({nextWeekTotal} 条)
-            </span>
-          </div>
-          <div className="space-y-6">
-            {nextWeekSections.map((sub) => (
-              <div key={sub.key}>
-                <h3 className="text-sm font-semibold text-[var(--color-muted-fg)] mb-3">
-                  {sub.label}
-                </h3>
-                <div className="space-y-2">
-                  {sub.items.map((item, idx) => {
-                    const hidden = checkHidden(
-                      moderation,
-                      "next_week_focus",
-                      idx,
-                      sub.key
-                    );
-                    return (
-                      <div
-                        key={idx}
-                        className={`rounded-lg border p-3 flex items-start justify-between gap-4 transition-colors ${
-                          hidden
-                            ? "border-[var(--color-danger)]/30 bg-[var(--color-danger)]/5 opacity-60"
-                            : "border-[var(--color-border)] bg-[var(--color-surface)]"
-                        }`}
-                      >
-                        <div className="flex-1 min-w-0">
-                          <div className="text-sm text-[var(--color-foreground)]">
-                            {item}
+                        <div className="text-[13px] font-semibold text-[var(--color-foreground)] mb-1">{item.company_or_institution}</div>
+                        <div className="text-[13px] text-[var(--color-muted)] leading-relaxed">{item.summary}</div>
+                        {item.impact_assessment && (
+                          <div className="mt-2 text-[12px] text-[var(--color-muted-fg)] bg-[var(--color-neutral-100)] border border-[var(--color-border)] rounded-lg px-3 py-2">
+                            影响评估：{item.impact_assessment}
                           </div>
-                          {hidden && (
-                            <div className="mt-1 text-xs text-[var(--color-danger)]">
-                              原因：
-                              {getReason(
-                                moderation,
-                                "next_week_focus",
-                                idx,
-                                sub.key
-                              ) || "未填写"}
+                        )}
+                      </div>
+                      <div className="shrink-0 pt-1">
+                        <ModerationToggle
+                          reportId={reportId}
+                          section="event_list"
+                          itemIndex={idx}
+                          initialHidden={hidden}
+                        />
+                      </div>
+                    </div>
+                  </SectionCard>
+                );
+              })}
+            </div>
+          </section>
+        )}
+
+        {/* Large Deals */}
+        {dealsTotal > 0 && (
+          <section>
+            <SectionHeader title="大额交易" total={dealsTotal} hidden={dealsHidden} accentColor="success" />
+            <div className="space-y-2">
+              {report.large_deals.map((item, idx) => {
+                const hidden = isHiddenBy(moderation, "large_deals", idx);
+                return (
+                  <SectionCard key={idx} hidden={hidden}>
+                    <div className="flex items-start justify-between gap-4 p-4">
+                      <div className="flex-1 min-w-0">
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                          <div>
+                            <div className="text-[10px] uppercase tracking-widest text-[var(--color-muted-fg)] mb-1">签约方</div>
+                            <div className="text-[13px] font-semibold text-[var(--color-foreground)]">{item.signatory}</div>
+                          </div>
+                          <div>
+                            <div className="text-[10px] uppercase tracking-widest text-[var(--color-muted-fg)] mb-1">买方</div>
+                            <div className="text-[13px] text-[var(--color-foreground)]">{item.buyer}</div>
+                          </div>
+                          <div>
+                            <div className="text-[10px] uppercase tracking-widest text-[var(--color-muted-fg)] mb-1">产品 / 服务</div>
+                            <div className="text-[13px] text-[var(--color-foreground)]">{item.product_or_service}</div>
+                          </div>
+                          <div>
+                            <div className="text-[10px] uppercase tracking-widest text-[var(--color-muted-fg)] mb-1">金额</div>
+                            <div className="inline-flex items-center rounded-md bg-[var(--color-accent-dim)] px-2 py-0.5 text-[12px] font-bold text-[var(--color-accent)] border border-[var(--color-accent)]/20">
+                              {item.amount_range}
                             </div>
-                          )}
-                        </div>
-                        <div className="shrink-0">
-                          <ModerationToggle
-                            reportId={reportId}
-                            section="next_week_focus"
-                            itemIndex={idx}
-                            subSection={sub.key}
-                            initialHidden={hidden}
-                            initialReason={getReason(
-                              moderation,
-                              "next_week_focus",
-                              idx,
-                              sub.key
-                            )}
-                          />
+                          </div>
                         </div>
                       </div>
-                    );
-                  })}
+                      <div className="shrink-0 pt-1">
+                        <ModerationToggle
+                          reportId={reportId}
+                          section="large_deals"
+                          itemIndex={idx}
+                          initialHidden={hidden}
+                        />
+                      </div>
+                    </div>
+                  </SectionCard>
+                );
+              })}
+            </div>
+          </section>
+        )}
+
+        {/* Research Views */}
+        {hasResearch && (
+          <section>
+            <SectionHeader title="研报观点" total={1} hidden={researchHidden} accentColor="accent" />
+            <SectionCard hidden={!!researchHidden}>
+              <div className="flex items-start justify-between gap-4 p-4">
+                <div className="flex-1 min-w-0">
+                  <div className="space-y-3">
+                    <div>
+                      <div className="text-[10px] uppercase tracking-widest text-[var(--color-muted-fg)] mb-1.5">核心结论</div>
+                      <div className="text-[13px] text-[var(--color-muted)] leading-relaxed">{report.research_views!.core_conclusion}</div>
+                    </div>
+                    <div>
+                      <div className="text-[10px] uppercase tracking-widest text-[var(--color-muted-fg)] mb-1.5">行业判断</div>
+                      <div className="text-[13px] text-[var(--color-muted)] leading-relaxed">{report.research_views!.industry_judgement}</div>
+                    </div>
+                  </div>
+                </div>
+                <div className="shrink-0 pt-1">
+                  <ModerationToggle
+                    reportId={reportId}
+                    section="research_views"
+                    itemIndex={0}
+                    initialHidden={!!researchHidden}
+                  />
                 </div>
               </div>
-            ))}
-          </div>
-        </section>
-      )}
+            </SectionCard>
+          </section>
+        )}
+
+        {/* Watchlist */}
+        {watchTotal > 0 && (
+          <section>
+            <SectionHeader title="观察清单" total={watchTotal} hidden={watchHidden} accentColor="accent" />
+            <div className="grid gap-2 md:grid-cols-2">
+              {report.watchlist_companies.map((item, idx) => {
+                const hidden = isHiddenBy(moderation, "watchlist_companies", idx);
+                return (
+                  <SectionCard key={idx} hidden={hidden}>
+                    <div className="flex items-start justify-between gap-3 p-4">
+                      <div className="flex-1 min-w-0">
+                        <div className="text-[13px] font-semibold text-[var(--color-foreground)] mb-3">{item.company}</div>
+                        <div className="space-y-2">
+                          <div>
+                            <div className="text-[10px] uppercase tracking-widest text-[var(--color-muted-fg)] mb-1">跟踪理由</div>
+                            <div className="text-[12px] text-[var(--color-muted)] leading-relaxed">{item.tracking_reason}</div>
+                          </div>
+                          <div>
+                            <div className="text-[10px] uppercase tracking-widest text-[var(--color-muted-fg)] mb-1">关键指标</div>
+                            <div className="text-[12px] text-[var(--color-muted)] leading-relaxed">{item.key_metrics}</div>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="shrink-0 pt-1">
+                        <ModerationToggle
+                          reportId={reportId}
+                          section="watchlist_companies"
+                          itemIndex={idx}
+                          initialHidden={hidden}
+                        />
+                      </div>
+                    </div>
+                  </SectionCard>
+                );
+              })}
+            </div>
+          </section>
+        )}
+
+        {/* Next Week Focus */}
+        {nextWeekGroups.length > 0 && (
+          <section>
+            <SectionHeader title="下周关注" total={nextWeekTotal} hidden={nextWeekHidden} accentColor="accent" />
+            <div className="grid gap-6 md:grid-cols-2">
+              {nextWeekGroups.map((group) => {
+                const colorClassMap = {
+                  accent: "border-l-[var(--color-accent)]",
+                  success: "border-l-[var(--color-success)]",
+                  info: "border-l-[var(--color-info)]",
+                  danger: "border-l-[var(--color-danger)]",
+                };
+                return (
+                  <div key={group.key}>
+                    <h3 className={`text-xs font-bold uppercase tracking-widest text-[var(--color-muted-fg)] mb-3 pl-3 border-l-2 ${colorClassMap[group.color]}`}>
+                      {group.label}
+                    </h3>
+                    <div className="space-y-1.5">
+                      {group.items.map((item, idx) => {
+                        const hidden = isHiddenBy(moderation, "next_week_focus", idx, group.key);
+                        return (
+                          <div
+                            key={idx}
+                            className={`
+                              flex items-start justify-between gap-3 rounded-lg border px-3 py-2.5 transition-all
+                              ${hidden
+                                ? "border-[var(--color-danger)]/30 bg-[var(--color-danger)]/5 opacity-75"
+                                : "border-[var(--color-border)] bg-[var(--color-surface)]"
+                              }
+                            `}
+                          >
+                            <span className={`text-[12px] leading-relaxed ${hidden ? "line-through opacity-60" : "text-[var(--color-foreground)]"}`}>
+                              {item}
+                            </span>
+                            <ModerationToggle
+                              reportId={reportId}
+                              section="next_week_focus"
+                              itemIndex={idx}
+                              subSection={group.key}
+                              initialHidden={hidden}
+                            />
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        )}
+      </div>
     </div>
   );
 }

@@ -5,8 +5,6 @@ import type { WeeklyReport } from "@/types/report";
 export async function POST(request: NextRequest) {
   try {
     const body = (await request.json()) as WeeklyReport;
-    //输出传入的值
-    console.log(body)
 
     if (!body.report_type || !body.time_range?.start || !body.time_range?.end) {
       return NextResponse.json(
